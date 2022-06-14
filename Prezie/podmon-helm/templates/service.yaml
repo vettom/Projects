@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: podmon-svc
+  name: podmon-svc
+  namespace: monitoring
+spec:
+  ports:
+  - name: 8000-5000
+    port: {{.Values.service.port}}
+    protocol: {{.Values.service.protocol}}
+    targetPort: {{.Values.service.targetPort}}
+  selector:
+    app: podmon
+  type: {{.Values.service.type}}
+status:
+  loadBalancer: {}

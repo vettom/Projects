@@ -1,0 +1,90 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: monitoring
+spec: {}
+status: {}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: podmonitoring
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list","get"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: podsmonitoring-binding
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: podmonitoring
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: podmon
+  name: podmon
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: podmon
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: podmon
+    spec:
+      containers:
+      - image: dennysv/podmonitor_amd:latest
+      # - image: dennysv/podmonitor_arm:latest
+        name: podmonitor-arm-n5l8p
+        ports:
+        - containerPort: 5000
+        resources: {}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+        livenessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 5
+          httpGet:
+            path: podmon-svc.monitoring.svc.cluster.local:8000/container-resources?pod-label=app.kubernetes.io%2Fcomponent%3Dtesting
+            port: 5000
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: podmon-svc
+  name: podmon-svc
+  namespace: monitoring
+spec:
+  ports:
+  - name: 8000-5000
+    port: 8000
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    app: podmon
+  type: ClusterIP
+status:
+  loadBalancer: {}
