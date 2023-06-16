@@ -47,7 +47,6 @@ def fetch_data():
                 print('Data retrieved successfully')
             except Exception as e:
                 print('Error retrieving data:', e)
-
         time.sleep(5)
 
 if __name__ == '__main__':
