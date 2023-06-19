@@ -20,7 +20,7 @@ metadata:
 spec:
   containers:
   - name: prom-sd-shim
-    image: dennysv/prom_sd_shim:0.1.3
+    image: dennysv/prom_sd_shim
     readinessProbe:
       httpGet:
         path: /
@@ -31,7 +31,11 @@ spec:
     volumeMounts:
       - name: endpoints-cm
         mountPath: /config
-    resources: {}
+    resources:
+      limits:
+        memory: 128Mi
+      requests:
+        memory: 64Mi
   volumes:
   - name: endpoints-cm
     configMap:

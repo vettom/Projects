@@ -11,8 +11,8 @@ Requires /config/endpoints.json in format below
 ```
 # Building
 docker build -t prom_sd_shim .
-dk tag prom_sd_shim dennysv/prom_sd_shim:0.1.3
-docker push dennysv/prom_sd_shim:0.1.3
+dk tag prom_sd_shim dennysv/prom_sd_shim:latest
+docker push dennysv/prom_sd_shim:latest
 
 # Generating requirements.txt
 python -m venv venv
