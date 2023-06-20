@@ -1,11 +1,9 @@
 ---
 apiVersion: v1
 data:
-  endpoints.json: |
-    {
-        "cna": "https://vettom.github.io/api/cna.json",
-        "pis": "https://vettom.github.io/api/pis.json"
-    }
+  endpoints.yaml: |
+        cna: https://vettom.github.io/api/cna.json
+        pis: https://vettom.github.io/api/pis.json
 kind: ConfigMap
 metadata:
   name: endpoints
@@ -32,10 +30,10 @@ spec:
       - name: endpoints-cm
         mountPath: /config
     resources:
-      limits:
-        memory: 128Mi
       requests:
         memory: 64Mi
+      limits:
+        memory: 128Mi
   volumes:
   - name: endpoints-cm
     configMap:
