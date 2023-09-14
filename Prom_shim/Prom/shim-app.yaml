@@ -39,3 +39,14 @@ spec:
     configMap:
       name: endpoints
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prom-sd-shim
+spec:
+  selector:
+    app: prom-sd-shim
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
