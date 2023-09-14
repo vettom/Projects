@@ -1,60 +1,74 @@
 #!/usr/bin/env python3
-import json
-import requests
-import time
-from flask import Flask, jsonify
+import json,requests,time,os
+from flask import Flask,Response
 from prometheus_flask_exporter import PrometheusMetrics
-from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import Counter, Gauge
 
-failure_counter = Counter('app_failures_total', 'Total number of failures')
-my_counter = Counter('my_success', 'Sample by denny',['app_name'])
-metrics = PrometheusMetrics(app=None, path='/metrics')
+prometheus_sd_failed_configs = Gauge('prometheus_sd_failed_configs', 'Failure to fetch from endpoint',['app_name'])
+prometheus_sd_failed_total = Counter('prometheus_sd_failed', 'Total failed requests',['app_name'])
+prometheus_sd_requests_total = Counter('prometheus_sd_requests', 'Total requests for SD',['app_name'])
+metrics = PrometheusMetrics(app=None, path='/metrics', export_defaults = False)
 
 app = Flask(__name__)
+
 @app.route("/")
 def home_page():
-        return 'Test landing page. It worked'
+    global Endpoints
+    Message = { "Endpoints Configured" : Endpoints }
+    json_data = json.dumps(Message, indent=2)
+    return Response(json_data, mimetype='application/json')
 
 @app.route('/api/v1/<appname>')
 def sd_data(appname):
+    prometheus_sd_requests_total.labels(appname).inc()
+    app_endpoint = get_endpoint(appname)
+    if app_endpoint is None:
+        prometheus_sd_failed_configs.labels(appname).set(1)
+        Message = "ERROR: no matching entry found in configuration file for " + appname
+        return Message, 404
+    # Call respective function based on appname
+    if appname == "cna":
+        data = fetch_endpoint_cna(appname, app_endpoint)
+        json_data = json.dumps(data, indent=2)
+        return Response(json_data, mimetype='application/json')
+    else:
+        prometheus_sd_failed_configs.labels(appname).set(1)
+        Message = "ERROR: Please add function for "  + appname
+        return Message, 404
+
+def get_endpoint(appname):
+    global Endpoints
     try:
-        SD_File = appname + ".json"
-        with open(SD_File, 'r') as file:
-            data = json.load(file)
-            return jsonify(data)
-    except FileNotFoundError:
-        return "Data file not found"
-
-def fetch_data():
-    Endpoints = {"cna": 'https://vettom.github.io/api/mixed.json', "pis": 'https://vettom.github.io/api/mixed.json' }
-    while True:
         for App, Link in Endpoints.items():
-            try:
-                # For each App Link, process URL
-                response = requests.get(Link)
-                jsonData = response.json()
-                promData = {
-                    "targets": jsonData['result'],
-                            "labels": {
-                                "__meta_application": App,
-                            }
-                }
-                my_counter.labels(App).inc()
+            if appname == App:
+                return Link
+    except:
+        return None
 
-                # Write result to file
-                with open(f"{App}.json", 'w') as file:
-                    json.dump(promData, file)
-                print('Data retrieved successfully')
-            except Exception as e:
-                print('Error retrieving data:', e)
-        time.sleep(5)
+def fetch_endpoint_cna(appname,Link):
+    try:
+        response = requests.get(Link)
+        jsonData = response.json()
+        promData = {
+            "targets": jsonData['result'],
+                    "labels": {
+                        "__meta_application": appname,
+                    }
+        }
+    except Exception as e:
+        print(f"ERROR: Failed to retrieve data for {appname} and link: {Link}")
+        promData = "ERROR: Failed to retrieve data for " +  appname + " and link:" + Link
+        prometheus_sd_failed_configs.labels(appname).set(1)
+    return promData
 
 if __name__ == '__main__':
-    # Start the data retrieval in a separate thread
-    import threading
-    t = threading.Thread(target=fetch_data)
-    t.start()
-
+    # try:
+    #     with open("/config/endpoints.json", 'r') as file:
+    #         Endpoints = json.load(file)
+    # except Exception as e:
+    #     print(f"ERROR: Failed to load endpoints.json. \n {e}")
+    #     exit(1)
     # Start the HTTP server
+    Endpoints = {"cna": 'https://vettom.github.io/api/cna.json', "pis": 'https://vettom.github.io/api/pis.json',"cna": 'https://vettom.github.io/api/cna.json', }
     metrics.init_app(app)
-    app.run(port=8085)
+    app.run(host='0.0.0.0',port=8080)

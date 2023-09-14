@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+data:
+  endpoints.yaml: |
+        cna: https://vettom.github.io/api/cna.json
+        pis: https://vettom.github.io/api/pis.json
+kind: ConfigMap
+metadata:
+  name: endpoints
+  namespace: default
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: prom-sd-shim
+  labels:
+    run: prom-sd-shim
+spec:
+  containers:
+  - name: prom-sd-shim
+    image: dennysv/prom_sd_shim
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 8080
+        scheme: HTTP
+    ports:
+    - containerPort: 8080
+    volumeMounts:
+      - name: endpoints-cm
+        mountPath: /config
+    resources:
+      requests:
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+  volumes:
+  - name: endpoints-cm
+    configMap:
+      name: endpoints
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prom-sd-shim
+spec:
+  selector:
+    app: prom-sd-shim
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
