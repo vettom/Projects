@@ -5,8 +5,8 @@ Requires /config/endpoints.json in format below
 ```json
     {
         // "Project or App": "Endpint URL to scrape"
-        "cna": "https://example.com/api/cna.json",
-        "pis": "https://github.io/api/pis.json"
+        site1: "https://vettom.github.io/api/site1.json",
+        site2: "https://vettom.github.io/api/site2.json"
     }
 ```
 # Building
