@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 
 # Copy the application code to the working directory
 COPY . /app/
+COPY templates /app/
 
 # Expose the desired port (change if necessary)
 EXPOSE 8085

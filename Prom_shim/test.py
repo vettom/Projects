@@ -6,7 +6,7 @@ app = Flask(__name__)
 @app.route('/', methods=['GET'])
 def get_yaml_data():
     # Specify the path to your YAML file
-    yaml_file = './file.yaml'
+    yaml_file = './endpoints.yaml'
 
     # Read the YAML file
     with open(yaml_file, 'r') as file:
