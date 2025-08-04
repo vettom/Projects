@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-sd
+  labels:
+    app: ingress-sd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingress-sd
+  template:
+    metadata:
+      labels:
+        app: ingress-sd
+    spec:
+      serviceAccountName: ingress-sd
+      containers:
+        - name: app
+          image: dennysv/dvtools:latest
+          # ports:
+          #   - containerPort: 8000
