@@ -1,18 +1,66 @@
-# Promshim  Ingress
-Prometheus shim application to retrieve list of all Ingress and HTTPRoutes. then present it in HTTP_SD (Service definition) format for Prometheus to monitor.
+# promshim-http-sd
+
+Prometheus HTTP service discovery shim application written in Go. It retrieves Kubernetes Ingress and Gateway API HTTPRoute resources across all namespaces and exposes them in the Prometheus HTTP Service Discovery format.
+
+## Endpoints
+
+- `GET /` - Overview page listing available discovery endpoints and a table of discovered HTTP routes with clickable links
+- `GET /ingress-sd` - Prometheus HTTP service discovery targets derived from Kubernetes Ingress resources
+- `GET /httproutes-sd` - Prometheus HTTP service discovery targets derived from Gateway API HTTPRoute resources
+- `GET /healthz` - Health check endpoint (returns `{"status":"ok"}`)
 
 ## Requirements
-App uses prometheus service account role permission to list Ingresses and Http routes. During deployment, you must ensure that the ServiceAccount used by Pod can list all Ingresses  across all namespaces.
 
-## Build and push to registry
+The application runs inside a Kubernetes cluster using in-cluster configuration (or locally using `~/.kube/config`).
+The Pod's ServiceAccount requires RBAC permissions to:
+
+- `get`, `list`, `watch` on `networking.k8s.io/ingresses`
+- `get`, `list` on `gateway.networking.k8s.io/httproutes`
+
+## Local Development & Testing
+
+Run unit tests:
+
 ```bash
-podman build --arch amd64 .  -t dennysv/promshim-http-sd:latest
-podman push dennysv/promshim-http-sd:latest
+go test -v ./...
 ```
 
-## App design details
-**Authentication** : Pod is expecting to be running on EKS cluster with SA having necessary permissions. First it will try of In_cluster authentication, if not will try to load Kubeconfig to authenticate with cluster.
+Build binary:
 
-Ingress list : <URL>:<port>/ingress-sd
-HTTP Routes list : <URL>:<port>/httproutes-sd
+```bash
+go build -o promshim-http-sd .
+```
 
+Run locally (uses your `~/.kube/config`):
+
+```bash
+./promshim-http-sd
+```
+
+## Container Build
+
+The application uses a multi-stage Dockerfile to produce a minimal, secure container image:
+
+```bash
+# Build with Docker or Podman
+VERSION="v1.0.4"
+podman build --arch amd64 -t dennysv/promshim-http-sd:$VERSION .
+podman tag dennysv/promshim-http-sd:$VERSION dennysv/promshim-http-sd:latest
+podman push dennysv/promshim-http-sd:$VERSION
+podman push dennysv/promshim-http-sd:latest
+
+# ARM64
+podman build --arch arm64 -t dennysv/promshim-http-sd-arm:$VERSION .
+podman tag dennysv/promshim-http-sd-arm:$VERSION dennysv/promshim-http-sd-arm:latest
+podman push dennysv/promshim-http-sd-arm:$VERSION
+podman push dennysv/promshim-http-sd-arm:latest
+```
+
+### Build and Push to ECR
+
+```bash
+export AWS_PROFILE=cor-audio
+aws ecr get-login-password --profile labs--region eu-west-2 | podman login --username AWS --password-stdin <aws-account-number>.dkr.ecr.eu-west-2.amazonaws.com
+podman build --arch amd64 . -t <aws-account-number>.dkr.ecr.eu-west-2.amazonaws.com/promshim-http-sd:v<version>
+podman push <aws-account-number>.dkr.ecr.eu-west-2.amazonaws.com/promshim-http-sd:<version>
+```

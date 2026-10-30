@@ -1,16 +1,42 @@
-FROM python:3.13.5-slim-bookworm
+# Stage 1: Build the Go application
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder
 
-# Set the working directory to /app
+ARG TARGETOS
+ARG TARGETARCH
+
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY ./src/* /app
+# Install build dependencies
+RUN apk add --no-cache ca-certificates git
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --trusted-host pypi.python.org -r requirements.txt
+# Cache Go modules layer
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Make port 9113 available to the world outside this container
+# Copy application source code
+COPY . .
+
+# Build statically linked binary
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /app/promshim-http-sd .
+
+# Stage 2: Create a minimal runtime image
+FROM alpine:latest
+
+# Install ca-certificates for Kubernetes API communication and create non-root user
+RUN apk --no-cache add ca-certificates tzdata && \
+    addgroup -g 10001 -S appgroup && \
+    adduser -u 10001 -S appuser -G appgroup
+
+WORKDIR /app
+
+# Copy binary from builder stage
+COPY --from=builder /app/promshim-http-sd /app/promshim-http-sd
+
+# Run as non-root user
+USER 10001:10001
+
+# Make port 9113 available outside this container
 EXPOSE 9113
-# Run app.py when the container launches
 
-CMD ["flask", "run", "--host=0.0.0.0", "--port=9113"]
+# Run the binary when container launches
+ENTRYPOINT ["/app/promshim-http-sd"]

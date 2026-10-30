@@ -17,6 +17,6 @@ spec:
       serviceAccountName: ingress-sd
       containers:
         - name: app
-          image: dennysv/dvtools:latest
+          image: dennysv/promshim-http-sd:latest
           # ports:
           #   - containerPort: 8000
